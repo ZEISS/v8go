@@ -23,7 +23,7 @@ import (
 )
 """
 
-CHROME_VERSIONS_URL = "https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions/all/releases?filter=endtime%3E2023-01-01T00:00:00Z"
+CHROME_VERSIONS_URL = "https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions/"
 V8_VERSION_FILE = "v8_version"
 
 deps_path = os.path.dirname(os.path.realpath(__file__))
@@ -93,7 +93,7 @@ current_v8_version_installed = read_v8_version_file(deps_path)
 # Get latest version
 latest_v8_info = get_latest_v8_info()
 
-latest_stable_v8_version = latest_v8_info["releases"][0]["version"]
+latest_stable_v8_version = latest_v8_info["versions"][0]["version"]
 
 if current_v8_version_installed != latest_stable_v8_version:
   subprocess.check_call(["git", "fetch", "origin", latest_stable_v8_version],
