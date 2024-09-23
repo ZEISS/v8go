@@ -101,7 +101,7 @@ current_v8_version_installed = read_v8_version_file(deps_path)
 latest_chrome_version = get_latest_chrome_versions()
 latest_v8_version = get_latest_v8_info(latest_chrome_version[0]["version"])
 
-latest_stable_v8_version = latest_v8_version["version"]
+latest_stable_v8_version = latest_v8_version["v8_version"]
 
 if current_v8_version_installed != latest_stable_v8_version:
   subprocess.check_call(["git", "fetch", "origin", latest_stable_v8_version],
