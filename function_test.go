@@ -118,7 +118,6 @@ func TestFunctionCallError(t *testing.T) {
 	require.ErrorAs(t, err, &jsErr)
 	require.Equal(t, "error", jsErr.Message)
 	require.Equal(t, "script.js:1:21", jsErr.Location)
-
 }
 
 func TestFunctionSourceMapUrl(t *testing.T) {

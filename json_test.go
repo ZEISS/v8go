@@ -5,10 +5,10 @@
 package v8go_test
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/zeiss/v8go"
 	v8 "github.com/zeiss/v8go"
 )
@@ -29,9 +29,7 @@ func TestJSONParse(t *testing.T) {
 	}
 
 	var jerr *v8go.JSError
-	if errors.As(err, &jerr) {
-		t.Errorf("expected error to be of type JSError, got: %T", err)
-	}
+	require.ErrorAs(t, err, &jerr)
 }
 
 func TestJSONStringify(t *testing.T) {
