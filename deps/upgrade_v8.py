@@ -23,7 +23,8 @@ import (
 )
 """
 
-CHROME_VERSIONS_URL = "https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions/"
+CHROME_VERSIONS_URL = "https://chromiumdash.appspot.com/fetch_releases?platform=Linux&channel=stable"
+V8_VERSION_URL = "https://chromiumdash.appspot.com/fetch_version?version="
 V8_VERSION_FILE = "v8_version"
 
 deps_path = os.path.dirname(os.path.realpath(__file__))
@@ -81,7 +82,13 @@ def read_v8_version_file(src_path):
   v8_version_file = open(os.path.join(src_path, V8_VERSION_FILE), "r")
   return v8_version_file.read().strip()
 
-def get_latest_v8_info():
+def get_latest_v8_info(version):
+  with urllib.request.urlopen(V8_VERSION_URL + version) as response:
+   json_response = response.read()
+
+  return json.loads(json_response)
+
+def get_latest_chrome_versions():
   with urllib.request.urlopen(CHROME_VERSIONS_URL) as response:
    json_response = response.read()
 
@@ -91,9 +98,10 @@ def get_latest_v8_info():
 current_v8_version_installed = read_v8_version_file(deps_path)
 
 # Get latest version
-latest_v8_info = get_latest_v8_info()
+latest_chrome_version = get_latest_chrome_versions()
+latest_v8_version = get_latest_v8_info(latest_chrome_version[0]["version"])
 
-latest_stable_v8_version = latest_v8_info["versions"][0]["version"]
+latest_stable_v8_version = latest_v8_version["version"]
 
 if current_v8_version_installed != latest_stable_v8_version:
   subprocess.check_call(["git", "fetch", "origin", latest_stable_v8_version],
