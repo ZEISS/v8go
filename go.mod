@@ -1,6 +1,6 @@
 module github.com/zeiss/v8go
 
-go 1.22.1
+go 1.22
 
 toolchain go1.23.1
 
