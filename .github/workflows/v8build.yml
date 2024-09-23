@@ -12,7 +12,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                platform: [ubuntu-20.04, macos-14]
+                platform: [ubuntu-20.04]
                 arch: [x86_64, arm64]
         runs-on: ${{ matrix.platform }}
         steps:
@@ -30,9 +30,10 @@ jobs:
             - name: Build V8 linux
               if: matrix.platform == 'ubuntu-20.04'
               run: cd deps && ./build.py --no-clang --arch ${{ matrix.arch }}
-            - name: Build V8 macOS
-              if: matrix.platform == 'macos-14'
-              run: cd deps && ./build.py --arch ${{ matrix.arch }}
+            # Disabled macos-14 for the current setup
+            # - name: Build V8 macOS
+            #   if: matrix.platform == 'macos-14'
+            #   run: cd deps && ./build.py --arch ${{ matrix.arch }}
             - name: Create PR
               uses: peter-evans/create-pull-request@v7
               with:
