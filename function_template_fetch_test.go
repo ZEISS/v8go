@@ -31,6 +31,7 @@ func ExampleFunctionTemplate_fetch() {
 		resolver, _ := v8.NewPromiseResolver(info.Context())
 
 		go func() {
+			// nolint:govet,bodyclose,noctx
 			res, _ := http.Get(url)
 			body, _ := io.ReadAll(res.Body)
 			val, _ := v8.NewValue(iso, string(body))

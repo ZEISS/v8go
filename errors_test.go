@@ -5,6 +5,7 @@
 package v8go_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestJSErrorFormat(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if s := fmt.Sprintf("%v", tt.err); s != tt.defaultVerb {
@@ -72,22 +73,24 @@ func TestJSErrorOutput(t *testing.T) {
 		t.Error("expected error but got <nil>")
 		return
 	}
-	e, ok := err.(*v8.JSError)
-	if !ok {
-		t.Errorf("expected error of type JSError, got %T", err)
+
+	var jsErr *v8.JSError
+	if !errors.As(err, &jsErr) {
+		t.Errorf("expected error to be of type JSError, got: %T", err)
 	}
-	if e.Message != "ReferenceError: c is not defined" {
-		t.Errorf("unexpected error message: %q", e.Message)
+
+	if jsErr.Message != "ReferenceError: c is not defined" {
+		t.Errorf("unexpected error message: %q", jsErr.Message)
 	}
-	if e.Location != "math.js:7:17" {
-		t.Errorf("unexpected error location: %q", e.Location)
+	if jsErr.Location != "math.js:7:17" {
+		t.Errorf("unexpected error location: %q", jsErr.Location)
 	}
 	expectedStack := `ReferenceError: c is not defined
     at addMore (math.js:7:17)
     at main.js:3:10`
 
-	if e.StackTrace != expectedStack {
-		t.Errorf("unexpected error stack trace: %q", e.StackTrace)
+	if jsErr.StackTrace != expectedStack {
+		t.Errorf("unexpected error stack trace: %q", jsErr.StackTrace)
 	}
 }
 
@@ -104,7 +107,11 @@ func TestJSErrorFormat_forSyntaxError(t *testing.T) {
 		let z = x + z;
 	`
 	_, err := ctx.RunScript(script, "xyz.js")
-	jsErr := err.(*v8.JSError)
+
+	var jsErr *v8.JSError
+	if !errors.As(err, &jsErr) {
+		t.Errorf("expected error to be of type JSError, got: %T", err)
+	}
 	if jsErr.StackTrace != jsErr.Message {
 		t.Errorf("unexpected StackTrace %q not equal to Message %q", jsErr.StackTrace, jsErr.Message)
 	}

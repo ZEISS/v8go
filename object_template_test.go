@@ -49,7 +49,7 @@ func TestObjectTemplate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			setError(t, obj.Set(tt.name, tt.value, 0))
 		})
@@ -111,7 +111,7 @@ func TestGlobalObjectTemplate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			ctx := v8.NewContext(iso, tt.global())
 			val, err := ctx.RunScript(tt.source, "test.js")

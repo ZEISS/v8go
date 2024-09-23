@@ -11,8 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	v8 "github.com/zeiss/v8go"
 )
+
+const testStr = "bar"
 
 func TestIsolateTerminateExecution(t *testing.T) {
 	t.Parallel()
@@ -70,7 +73,7 @@ func TestIsolateCompileUnboundScript(t *testing.T) {
 
 	val, err := us.Run(c1)
 	fatalIf(t, err)
-	if val.String() != "bar" {
+	if val.String() != testStr {
 		t.Fatalf("invalid value returned, expected bar got %v", val)
 	}
 
@@ -93,7 +96,7 @@ func TestIsolateCompileUnboundScript(t *testing.T) {
 
 	val, err = usWithCachedData.Run(c2)
 	fatalIf(t, err)
-	if val.String() != "bar" {
+	if val.String() != testStr {
 		t.Fatalf("invalid value returned, expected bar got %v", val)
 	}
 }
@@ -117,7 +120,7 @@ func TestIsolateCompileUnboundScript_CachedDataRejected(t *testing.T) {
 	// Verify that unbound script is still compiled and able to be used
 	val, err := us.Run(ctx)
 	fatalIf(t, err)
-	if val.String() != "bar" {
+	if val.String() != testStr {
 		t.Errorf("invalid value returned, expected bar got %v", val)
 	}
 }
@@ -269,7 +272,8 @@ func BenchmarkIsolateInitAndRun(b *testing.B) {
 		vm := v8.NewIsolate()
 		ctx := v8.NewContext(vm)
 		ctx.RunScript(script, "main.js")
-		str, _ := json.Marshal(makeObject())
+		str, err := json.Marshal(makeObject())
+		require.NoError(b, err)
 		cmd := fmt.Sprintf("process(%s)", str)
 		ctx.RunScript(cmd, "cmd.js")
 		ctx.Close()

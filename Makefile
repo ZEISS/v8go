@@ -1,10 +1,18 @@
 .DEFAULT_GOAL := build
 
-GO ?= go
-GO_RUN_TOOLS ?= $(GO) run -modfile ./tools/go.mod
-GO_TEST = $(GO_RUN_TOOLS) gotest.tools/gotestsum --format pkgname
-GO_RELEASER ?= $(GO_RUN_TOOLS) github.com/goreleaser/goreleaser
-GO_MOD ?= $(shell ${GO} list -m)
+.DEFAULT_GOAL := build
+
+BASE_DIR			?= $(CURDIR)
+OUTPUT_DIR    ?= $(BASE_DIR)/dist
+
+GO 						?= go
+GO_RUN_TOOLS	?= $(GO) run -modfile ./tools/go.mod
+GO_TEST 			?= $(GO_RUN_TOOLS) gotest.tools/gotestsum --format pkgname
+GO_RELEASER 	?= $(GO_RUN_TOOLS) github.com/goreleaser/goreleaser
+GO_KO 				?= $(GO_RUN_TOOLS) github.com/google/ko
+GO_MOD 				?= $(shell ${GO} list -m)
+
+COMMANDS		:= $(notdir $(wildcard cmd/*))
 
 .PHONY: generate
 generate: ## Generate code.

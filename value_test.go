@@ -48,7 +48,7 @@ func TestValueFormatting(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			if s := fmt.Sprintf("%v", val); s != tt.defaultVerb {
@@ -86,7 +86,7 @@ func TestValueString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			result, _ := ctx.RunScript(tt.source, "test.js")
 			str := result.String()
@@ -115,7 +115,7 @@ func TestNewValue(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			val, err := ctx.RunScript(tt.predicate, "test.js")
 			if err != nil {
@@ -160,7 +160,7 @@ func TestValueDetailString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			result, _ := ctx.RunScript(tt.source, "test.js")
 			str := result.DetailString()
@@ -195,7 +195,7 @@ func TestValueBoolean(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			if b := val.Boolean(); b != tt.out {
@@ -223,7 +223,6 @@ func TestValueConstants(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 
 		val, err := ctx.RunScript(tt.source, "test.js")
 		fatalIf(t, err)
@@ -259,7 +258,7 @@ func TestValueArrayIndex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			idx, ok := val.ArrayIndex()
@@ -302,7 +301,7 @@ func TestValueInt32(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			if i32 := val.Int32(); i32 != tt.expected {
@@ -341,7 +340,7 @@ func TestValueInteger(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			if i64 := val.Integer(); i64 != tt.expected {
@@ -378,7 +377,7 @@ func TestValueNumber(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			f64 := val.Number()
@@ -411,7 +410,7 @@ func TestValueUint32(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			val, _ := ctx.RunScript(tt.source, "test.js")
 			if u32 := val.Uint32(); u32 != tt.expected {
@@ -442,7 +441,7 @@ func TestValueBigInt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			ctx := v8.NewContext(iso)
 			defer ctx.Close()
@@ -637,7 +636,7 @@ func TestValueIsXXX(t *testing.T) {
 		{"new Proxy({},{})", (*v8.Value).IsProxy},
 	}
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.source, func(t *testing.T) {
 			ctx := v8.NewContext(iso)
 			defer ctx.Close()
@@ -695,7 +694,7 @@ func TestValueMarshalJSON(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := v8.NewContext(iso)
 			defer ctx.Close()

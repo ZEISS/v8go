@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	v8 "github.com/zeiss/v8go"
 )
 
@@ -57,7 +58,6 @@ func TestJSExceptions(t *testing.T) {
 	defer ctx.Close()
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := ctx.RunScript(tt.source, tt.origin)
 			if err == nil {
@@ -159,7 +159,8 @@ func BenchmarkContext(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		ctx := v8.NewContext(iso)
 		ctx.RunScript(script, "main.js")
-		str, _ := json.Marshal(makeObject())
+		str, err := json.Marshal(makeObject())
+		require.NoError(b, err)
 		cmd := fmt.Sprintf("process(%s)", str)
 		ctx.RunScript(cmd, "cmd.js")
 		ctx.Close()

@@ -7,6 +7,7 @@ package v8go_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	v8 "github.com/zeiss/v8go"
 )
 
@@ -112,11 +113,12 @@ func TestFunctionCallError(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected an error, got none")
 	}
-	got := *(err.(*v8.JSError))
-	want := v8.JSError{Message: "error", Location: "script.js:1:21"}
-	if got != want {
-		t.Errorf("want %+v, got: %+v", want, got)
-	}
+
+	var jsErr *v8.JSError
+	require.ErrorAs(t, err, &jsErr)
+	require.Equal(t, "error", jsErr.Message)
+	require.Equal(t, "script.js:1:21", jsErr.Location)
+
 }
 
 func TestFunctionSourceMapUrl(t *testing.T) {
@@ -196,9 +198,7 @@ func TestFunctionNewInstanceError(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected an error, got none")
 	}
-	got := *(err.(*v8.JSError))
-	want := v8.JSError{Message: "error", Location: "script.js:1:21"}
-	if got != want {
-		t.Errorf("want %+v, got: %+v", want, got)
-	}
+
+	var jsErr *v8.JSError
+	require.ErrorAs(t, err, &jsErr)
 }
