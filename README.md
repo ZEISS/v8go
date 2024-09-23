@@ -4,8 +4,9 @@
 [![Go Report Card](https://goreportcard.com/badge/zeiss/v8go)](https://goreportcard.com/report/zeiss/v8go)
 [![Go Reference](https://pkg.go.dev/badge/zeiss/v8go.svg)](https://pkg.go.dev/zeiss/v8go)
 [![Test](https://github.com/zeiss/v8go/actions/workflows/main.yml/badge.svg)](https://github.com/zeiss/v8go/actions/workflows/main.yml)
-![V8 Build](https://github.com/zeiss/v8go/workflows/V8%20Build/badge.svg)
-[![codecov](https://codecov.io/gh/zeiss/v8go/branch/master/graph/badge.svg?token=VHZwzGm3dV)](https://codecov.io/gh/zeiss/v8go)
+[![Taylor Swift](https://img.shields.io/badge/secured%20by-taylor%20swift-brightgreen.svg)](https://twitter.com/SwiftOnSecurity)
+[![Volkswagen](https://auchenberg.github.io/volkswagen/volkswargen_ci.svg?v=1)](https://github.com/auchenberg/volkswagen)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 <img src="gopher.jpg" width="200px" alt="V8 Gopher based on original artwork from the amazing Renee French" />
 
