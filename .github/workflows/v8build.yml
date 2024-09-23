@@ -16,26 +16,19 @@ jobs:
                 arch: [x86_64, arm64]
         runs-on: ${{ matrix.platform }}
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
               with:
                   submodules: true
                   fetch-depth: 1
-            - name: Update depot_tools fetch config
-              run: cd deps/depot_tools && git config --unset-all remote.origin.fetch; git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+            - run: cd deps/depot_tools && git config --unset-all remote.origin.fetch; git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
               shell: bash
-            - name: Install g++-aarch64-linux-gnu
-              if: matrix.platform == 'ubuntu-20.04' && matrix.arch == 'arm64'
+            - if: matrix.platform == 'ubuntu-20.04' && matrix.arch == 'arm64'
               run: sudo apt update && sudo apt install g++-aarch64-linux-gnu -y
-            - name: Build V8 linux
-              if: matrix.platform == 'ubuntu-20.04'
+            - if: matrix.platform == 'ubuntu-20.04'
               run: cd deps && ./build.py --no-clang --arch ${{ matrix.arch }}
-            # Disabled macos-14 for the current setup
-            # - name: Build V8 macOS
-            #   if: matrix.platform == 'macos-14'
-            #   run: cd deps && ./build.py --arch ${{ matrix.arch }}
-            - name: Create PR
-              uses: peter-evans/create-pull-request@v7
+            - if: matrix.platform == 'macos-14'
+              run: cd deps && ./build.py --arch ${{ matrix.arch }}
+            - uses: peter-evans/create-pull-request@v7
               with:
                 commit-message: Update V8 static library for ${{ matrix.platform }} ${{ matrix.arch }}
                 branch-suffix: random
