@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/zeiss/v8go"
 	v8 "github.com/zeiss/v8go"
 )
 
@@ -27,7 +28,7 @@ func TestJSONParse(t *testing.T) {
 		return
 	}
 
-	var jerr *v8.JSError
+	var jerr *v8go.JSError
 	if errors.As(err, &jerr) {
 		t.Errorf("expected error to be of type JSError, got: %T", err)
 	}
