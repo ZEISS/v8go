@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	v8 "github.com/katallaxie/v8go"
+	v8 "github.com/zeiss/v8go"
 )
 
 func TestIsolateTerminateExecution(t *testing.T) {

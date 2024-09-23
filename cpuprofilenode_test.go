@@ -7,7 +7,7 @@ package v8go_test
 import (
 	"testing"
 
-	v8 "github.com/katallaxie/v8go"
+	v8 "github.com/zeiss/v8go"
 )
 
 func TestCPUProfileNode(t *testing.T) {

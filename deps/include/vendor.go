@@ -3,6 +3,6 @@
 package include
 
 import (
-	_ "github.com/katallaxie/v8go/deps/include/cppgc"
-	_ "github.com/katallaxie/v8go/deps/include/libplatform"
+	_ "github.com/zeiss/v8go/deps/include/cppgc"
+	_ "github.com/zeiss/v8go/deps/include/libplatform"
 )

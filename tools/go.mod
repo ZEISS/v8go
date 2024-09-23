@@ -1,11 +1,11 @@
-module github.com/katallaxie/v8go/tools
+module github.com/zeiss/v8go/tools
 
 go 1.20
 
 require (
-	github.com/golangci/golangci-lint v1.61.0
 	gotest.tools/gotestsum v1.12.0
-	mvdan.cc/gofumpt v0.7.0
+  mvdan.cc/gofumpt v0.7.0
+  github.com/golangci/golangci-lint v1.55.2
 )
 
 require (
