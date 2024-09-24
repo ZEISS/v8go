@@ -2,17 +2,21 @@
 
 .DEFAULT_GOAL := build
 
-BASE_DIR			?= $(CURDIR)
-OUTPUT_DIR    ?= $(BASE_DIR)/dist
+BASE_DIR		?= $(CURDIR)
+OUTPUT_DIR    	?= $(BASE_DIR)/dist
 
-GO 						?= go
+GO 				?= go
 GO_RUN_TOOLS	?= $(GO) run -modfile ./tools/go.mod
-GO_TEST 			?= $(GO_RUN_TOOLS) gotest.tools/gotestsum --format pkgname
+GO_TEST 		?= $(GO_RUN_TOOLS) gotest.tools/gotestsum --format pkgname
 GO_RELEASER 	?= $(GO_RUN_TOOLS) github.com/goreleaser/goreleaser
-GO_KO 				?= $(GO_RUN_TOOLS) github.com/google/ko
-GO_MOD 				?= $(shell ${GO} list -m)
+GO_KO 			?= $(GO_RUN_TOOLS) github.com/google/ko
+GO_MOD 			?= $(shell ${GO} list -m)
 
 COMMANDS		:= $(notdir $(wildcard cmd/*))
+
+.PHONY: release
+release: ## Release the project.
+	$(GO_RELEASER) release --clean
 
 .PHONY: generate
 generate: ## Generate code.
