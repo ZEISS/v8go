@@ -167,6 +167,20 @@ func BenchmarkContext(b *testing.B) {
 	}
 }
 
+func BenchmarkContextExample(b *testing.B) {
+	b.ReportAllocs()
+	iso := v8.NewIsolate()
+	defer iso.Dispose()
+	for n := 0; n < b.N; n++ {
+		ctx := v8.NewContext()
+		defer ctx.Isolate().Dispose()
+		defer ctx.Close()
+		ctx.RunScript("const add = (a, b) => a + b", "math.js")
+		ctx.RunScript("const result = add(3, 4)", "main.js")
+		_, _ = ctx.RunScript("result", "value.js")
+	}
+}
+
 func ExampleContext() {
 	ctx := v8.NewContext()
 	defer ctx.Isolate().Dispose()

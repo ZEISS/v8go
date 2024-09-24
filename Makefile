@@ -18,6 +18,11 @@ COMMANDS		:= $(notdir $(wildcard cmd/*))
 generate: ## Generate code.
 	$(GO) generate ./...
 
+.PHONY: bench
+bench: ## Run benchmarks.
+	mkdir -p .test/reports
+	$(GO_TEST) --junitfile .test/reports/bench-test.xml -- -bench=. -benchmem ./...
+
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	$(GO_RUN_TOOLS) mvdan.cc/gofumpt -w .
