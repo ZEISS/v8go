@@ -9,6 +9,7 @@ import (
 	v8 "github.com/zeiss/v8go"
 
 	"github.com/spf13/cobra"
+	"github.com/zeiss/v8go-polyfills/console"
 )
 
 type Config struct {
@@ -52,8 +53,13 @@ func runRoot(ctx context.Context) error {
 		return err
 	}
 
-	c := v8.NewContext()
+	iso := v8.NewIsolate()
+	defer iso.Dispose()
+
+	c := v8.NewContext(iso)
 	defer c.Close()
+
+	console.Add(c, console.WithOutput(os.Stdout))
 
 	_, err = c.RunScript(string(src), "main.js")
 	if err != nil {

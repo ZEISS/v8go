@@ -1,13 +1,13 @@
 module github.com/zeiss/v8go
 
-go 1.22.1
+go 1.23.1
 
 toolchain go1.23.4
 
 require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
-	github.com/zeiss/pkg v0.1.19
+	github.com/zeiss/v8go-polyfills v0.0.0-20241126043451-29233cf876bf
 )
 
 require (
