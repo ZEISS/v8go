@@ -8,10 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <optional>
 #include <vector>
 
 #include "v8-internal.h"      // NOLINT(build/include_directory)
+#include "v8-isolate.h"       // NOLINT(build/include_directory)
 #include "v8-local-handle.h"  // NOLINT(build/include_directory)
+#include "v8config.h"         // NOLINT(build/include_directory)
 
 namespace v8 {
 
@@ -36,6 +39,10 @@ struct GarbageCollectionSizes {
 
 struct GarbageCollectionFullCycle {
   int reason = -1;
+  // The priority of the isolate during the GC cycle. A nullopt value denotes a
+  // mixed priority cycle, meaning the Isolate's priority was changed while the
+  // cycle was in progress.
+  std::optional<v8::Isolate::Priority> priority = std::nullopt;
   GarbageCollectionPhases total;
   GarbageCollectionPhases total_cpp;
   GarbageCollectionPhases main_thread;
@@ -54,6 +61,11 @@ struct GarbageCollectionFullCycle {
   double efficiency_cpp_in_bytes_per_us = -1.0;
   double main_thread_efficiency_in_bytes_per_us = -1.0;
   double main_thread_efficiency_cpp_in_bytes_per_us = -1.0;
+  double collection_weight_in_percent = -1.0;
+  double collection_weight_cpp_in_percent = -1.0;
+  double main_thread_collection_weight_in_percent = -1.0;
+  double main_thread_collection_weight_cpp_in_percent = -1.0;
+  int64_t incremental_marking_start_stop_wall_clock_duration_in_us = -1;
 };
 
 struct GarbageCollectionFullMainThreadIncrementalMark {
@@ -80,6 +92,10 @@ using GarbageCollectionFullMainThreadBatchedIncrementalSweep =
 
 struct GarbageCollectionYoungCycle {
   int reason = -1;
+  // The priority of the isolate during the GC cycle. A nullopt value denotes a
+  // mixed priority cycle, meaning the Isolate's priority was changed while the
+  // cycle was in progress.
+  std::optional<v8::Isolate::Priority> priority = std::nullopt;
   int64_t total_wall_clock_duration_in_us = -1;
   int64_t main_thread_wall_clock_duration_in_us = -1;
   double collection_rate_in_percent = -1.0;
@@ -96,16 +112,42 @@ struct GarbageCollectionYoungCycle {
 };
 
 struct WasmModuleDecoded {
+  WasmModuleDecoded() = default;
+  WasmModuleDecoded(bool async, bool streamed, bool success,
+                    size_t module_size_in_bytes, size_t function_count,
+                    int64_t wall_clock_duration_in_us)
+      : async(async),
+        streamed(streamed),
+        success(success),
+        module_size_in_bytes(module_size_in_bytes),
+        function_count(function_count),
+        wall_clock_duration_in_us(wall_clock_duration_in_us) {}
+
   bool async = false;
   bool streamed = false;
   bool success = false;
   size_t module_size_in_bytes = 0;
   size_t function_count = 0;
   int64_t wall_clock_duration_in_us = -1;
-  int64_t cpu_duration_in_us = -1;
 };
 
 struct WasmModuleCompiled {
+  WasmModuleCompiled() = default;
+
+  WasmModuleCompiled(bool async, bool streamed, bool cached, bool deserialized,
+                     bool lazy, bool success, size_t code_size_in_bytes,
+                     size_t liftoff_bailout_count,
+                     int64_t wall_clock_duration_in_us)
+      : async(async),
+        streamed(streamed),
+        cached(cached),
+        deserialized(deserialized),
+        lazy(lazy),
+        success(success),
+        code_size_in_bytes(code_size_in_bytes),
+        liftoff_bailout_count(liftoff_bailout_count),
+        wall_clock_duration_in_us(wall_clock_duration_in_us) {}
+
   bool async = false;
   bool streamed = false;
   bool cached = false;
@@ -115,7 +157,6 @@ struct WasmModuleCompiled {
   size_t code_size_in_bytes = 0;
   size_t liftoff_bailout_count = 0;
   int64_t wall_clock_duration_in_us = -1;
-  int64_t cpu_duration_in_us = -1;
 };
 
 struct WasmModuleInstantiated {
