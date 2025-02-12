@@ -10,7 +10,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "esbuild": "0.24.1"
+    "esbuild": "0.25.0"
   },
   "dependencies": {
     "react": "^19.0.0",
