@@ -24,7 +24,7 @@ class TracingSession;
 namespace v8 {
 
 namespace base {
-class Mutex;
+class SpinningMutex;
 }  // namespace base
 
 namespace platform {
@@ -282,12 +282,12 @@ class V8_PLATFORM_EXPORT TracingController
                                 const char* name, uint64_t handle) override;
 
   static const char* GetCategoryGroupName(const uint8_t* category_enabled_flag);
-#endif  // !defined(V8_USE_PERFETTO)
 
   void AddTraceStateObserver(
       v8::TracingController::TraceStateObserver* observer) override;
   void RemoveTraceStateObserver(
       v8::TracingController::TraceStateObserver* observer) override;
+#endif  // !defined(V8_USE_PERFETTO)
 
   void StartTracing(TraceConfig* trace_config);
   void StopTracing();
@@ -304,10 +304,9 @@ class V8_PLATFORM_EXPORT TracingController
   void UpdateCategoryGroupEnabledFlags();
 #endif  // !defined(V8_USE_PERFETTO)
 
-  std::unique_ptr<base::Mutex> mutex_;
+  std::unique_ptr<base::SpinningMutex> mutex_;
   std::unique_ptr<TraceConfig> trace_config_;
   std::atomic_bool recording_{false};
-  std::unordered_set<v8::TracingController::TraceStateObserver*> observers_;
 
 #if defined(V8_USE_PERFETTO)
   std::ostream* output_stream_ = nullptr;
@@ -316,6 +315,7 @@ class V8_PLATFORM_EXPORT TracingController
   TraceEventListener* listener_for_testing_ = nullptr;
   std::unique_ptr<perfetto::TracingSession> tracing_session_;
 #else   // !defined(V8_USE_PERFETTO)
+  std::unordered_set<v8::TracingController::TraceStateObserver*> observers_;
   std::unique_ptr<TraceBuffer> trace_buffer_;
 #endif  // !defined(V8_USE_PERFETTO)
 
