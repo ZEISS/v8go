@@ -4,5 +4,5 @@ package include
 
 import (
 	_ "github.com/zeiss/v8go/deps/include/cppgc"
-	_ "github.com/zeiss/v8go/deps/include/libplatform"
+  _ "github.com/zeiss/v8go/deps/include/libplatform"
 )
