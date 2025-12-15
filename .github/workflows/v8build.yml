@@ -28,7 +28,7 @@ jobs:
               run: cd deps && ./build.py --no-clang --arch ${{ matrix.arch }}
             - if: matrix.platform == 'macos-14'
               run: cd deps && ./build.py --arch ${{ matrix.arch }}
-            - uses: peter-evans/create-pull-request@v7
+            - uses: peter-evans/create-pull-request@v8
               with:
                 commit-message: Update V8 static library for ${{ matrix.platform }} ${{ matrix.arch }}
                 branch-suffix: random

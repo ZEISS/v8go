@@ -27,7 +27,7 @@ jobs:
                 echo "pr_branch=v8_$(cat deps/v8_version)_upgrade" >> $GITHUB_OUTPUT
                 echo "pr_commit_message=Upgrade V8 binaries for $(cat deps/v8_version) version" >> $GITHUB_OUTPUT
                 echo "pr_body=Auto-generated pull request to upgrade V8 binary for $(cat deps/v8_version) version" >> $GITHUB_OUTPUT
-            - uses: peter-evans/create-pull-request@v7
+            - uses: peter-evans/create-pull-request@v8
               with:
                 commit-message: ${{steps.pr_metadata.outputs.pr_commit_message}}
                 branch: ${{steps.pr_metadata.outputs.pr_branch}}
