@@ -1,0 +1,37 @@
+name: V8 Upgrade
+
+on:
+  workflow_dispatch:
+    inputs:
+      v8_hash:
+        description: 'V8 hash to upgrade to (optional, for manual runs)'
+        required: true
+
+jobs:
+  upgrade:
+    name: Upgrade V8
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Utilities
+      run: |
+        sudo apt-get update
+        sudo apt-get install -qy --no-install-recommends jq
+
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+
+  build:
+    name: Run V8 Build
+    needs: upgrade
+    uses: ./.github/workflows/v8_build.yml
+    with:
+      v8_hash: ${{ inputs.v8_hash }}
+
+  test:
+    name: Run V8 Tests
+    needs: build
+    uses: ./.github/workflows/test.yml
+    with:
+      v8_hash: ${{ inputs.v8_hash }}

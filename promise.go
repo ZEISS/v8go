@@ -29,7 +29,7 @@ type PromiseResolver struct {
 	prom *Promise
 }
 
-// Promise is the JavaScript promise object defined in ES6
+// Promise is the JavaScript promise object defined in ES6.
 type Promise struct {
 	*Object
 }
@@ -95,6 +95,17 @@ func (p *Promise) Result() *Value {
 // The default MicrotaskPolicy processes them when the call depth decreases to 0.
 // Call (*Context).PerformMicrotaskCheckpoint to trigger it manually.
 func (p *Promise) Then(cbs ...FunctionCallback) *Promise {
+	cbwes := make([]FunctionCallbackWithError, len(cbs))
+	for i, cb := range cbs {
+		cbwes[i] = func(info *FunctionCallbackInfo) (*Value, error) {
+			return cb(info), nil
+		}
+	}
+
+	return p.ThenWithError(cbwes...)
+}
+
+func (p *Promise) ThenWithError(cbs ...FunctionCallbackWithError) *Promise {
 	var rtn C.RtnValue
 	switch len(cbs) {
 	case 1:
@@ -118,6 +129,12 @@ func (p *Promise) Then(cbs ...FunctionCallback) *Promise {
 // Catch invokes the given function if the promise is rejected.
 // See Then for other details.
 func (p *Promise) Catch(cb FunctionCallback) *Promise {
+	return p.CatchWithError(func(info *FunctionCallbackInfo) (*Value, error) {
+		return cb(info), nil
+	})
+}
+
+func (p *Promise) CatchWithError(cb FunctionCallbackWithError) *Promise {
 	cbID := p.ctx.iso.registerCallback(cb)
 	rtn := C.PromiseCatch(p.ptr, C.int(cbID))
 	obj, err := objectResult(p.ctx, rtn)

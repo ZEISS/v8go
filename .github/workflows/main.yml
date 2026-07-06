@@ -1,36 +1,40 @@
-name: Test
+# .github/workflows/main.yml
+
+name: Test & Lint
 
 on:
+  workflow_call:
   push:
     branches:
       - main
+      - release/*
   pull_request:
-  workflow_dispatch:
-  workflow_call:
+    branches:
+      - main
 
 jobs:
   test:
-    name: Tests on ${{ matrix.go-version }} ${{ matrix.platform }}
-    strategy:
-      matrix:
-        go-version: ['1.22', '1.23']
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
     steps:
-    - uses: actions/checkout@v7
-    - uses: actions/setup-go@v6
-      with:
-        go-version: ${{ matrix.go-version }}
-    - run: make test
-    # - uses: codecov/codecov-action@v1
-    #   env:
-    #     OS: ${{ matrix.platform }}
-    #     GO: ${{ matrix.go-version }}
-    #   with:
-    #     files: ./c.out
-    #     env_vars: OS,GO
-    # - run: echo "GOPATH=$(go env GOPATH)" >>"$GITHUB_ENV"
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+      - run: make test
+      - uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Go Test Results
+          path: .test/reports/**-test.xml
+          reporter: java-junit
+          fail-on-error: "true"
+      - uses: actions/upload-artifact@v7
+        if: success() || failure()
+        with:
+          name: Test Reports
+          path: .test/reports/**
 
   lint:
     runs-on: ubuntu-latest
@@ -41,4 +45,3 @@ jobs:
           go-version-file: ./go.mod
           check-latest: true
       - run: make lint
-        

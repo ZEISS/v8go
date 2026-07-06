@@ -4,9 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/zeiss/v8go)](https://goreportcard.com/report/zeiss/v8go)
 [![Go Reference](https://pkg.go.dev/badge/zeiss/v8go.svg)](https://pkg.go.dev/zeiss/v8go)
 [![Test](https://github.com/zeiss/v8go/actions/workflows/main.yml/badge.svg)](https://github.com/zeiss/v8go/actions/workflows/main.yml)
-[![Taylor Swift](https://img.shields.io/badge/secured%20by-taylor%20swift-brightgreen.svg)](https://twitter.com/SwiftOnSecurity)
-[![Volkswagen](https://auchenberg.github.io/volkswagen/volkswargen_ci.svg?v=1)](https://github.com/auchenberg/volkswagen)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![V8 Build](https://github.com/zeiss/v8go/workflows/V8%20Build/badge.svg)
+![V8 Version](https://img.shields.io/badge/V8-14.6.202.28-blue)
 
 <img src="gopher.jpg" width="200px" alt="V8 Gopher based on original artwork from the amazing Renee French" />
 
@@ -180,6 +179,44 @@ func printTree(nest string, node *v8.CPUProfileNode) {
 //   (garbage collector) :0:0
 ```
 
+## Benchmark
+
+Run the benchmarks via `make bench`.
+
+```bash
+go vet ./...
+go test -bench=. | go tool golang.org/x/perf/cmd/benchstat -
+goos: linux
+goarch: arm64
+pkg: github.com/zeiss/v8go
+                        │      -       │
+                        │    sec/op    │
+Context-8                 117.9µ ± ∞ ¹
+IsolateInitialization-8   305.1µ ± ∞ ¹
+IsolateInitAndRun-8       434.5µ ± ∞ ¹
+IsolateCodeCache-8        420.8µ ± ∞ ¹
+geomean                   284.8µ
+¹ need >= 6 samples for confidence interval at level 0.95
+
+                        │      -      │
+                        │    B/op     │
+Context-8                 768.0 ± ∞ ¹
+IsolateInitialization-8   152.0 ± ∞ ¹
+IsolateInitAndRun-8       921.0 ± ∞ ¹
+IsolateCodeCache-8        264.0 ± ∞ ¹
+geomean                   410.5
+¹ need >= 6 samples for confidence interval at level 0.95
+
+                        │      -      │
+                        │  allocs/op  │
+Context-8                 18.00 ± ∞ ¹
+IsolateInitialization-8   5.000 ± ∞ ¹
+IsolateInitAndRun-8       23.00 ± ∞ ¹
+IsolateCodeCache-8        12.00 ± ∞ ¹
+geomean                   12.55
+¹ need >= 6 samples for confidence interval at level 0.95
+```
+
 ## Documentation
 
 Go Reference & more examples: https://pkg.go.dev/zeiss/v8go
@@ -201,7 +238,7 @@ variable.
 
 ## V8 dependency
 
-V8 version: **9.0.257.18** (April 2021)
+V8 version: **14.6.202.28** (March 2026)
 
 In order to make `v8go` usable as a standard Go package, prebuilt static libraries of V8
 are included for Linux and macOS. you *should not* require to build V8 yourself.
@@ -217,10 +254,6 @@ example: using multiple return values to return both result and error from a fun
 exception.
 
 This project also aims to keep up-to-date with the latest (stable) release of V8.
-
-## License
-
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B22862%2Fgit%40github.com%3Azeiss%2Fv8go.git.svg?type=large)](https://app.fossa.com/projects/custom%2B22862%2Fgit%40github.com%3Azeiss%2Fv8go.git?ref=badge_large)
 
 ## Development
 
@@ -302,3 +335,7 @@ Go has `go fmt`, C has `clang-format`. Any changes to the `v8go.h|cc` should be 
 ---
 
 V8 Gopher image based on original artwork from the amazing [Renee French](http://reneefrench.blogspot.com).
+
+## License
+
+[Apache 2.0](/LICENSE)

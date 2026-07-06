@@ -1,0 +1,58 @@
+name: Test
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      sha:
+        description: "The commit to check out at. Defaults to the parent workflow's github.sha."
+        required: false
+        type: string
+      v8_hash:
+        description: The V8 commit hash to build at. Defaults to the previously built version.
+        required: false
+        type: string
+
+jobs:
+  test:
+    name: Tests on ${{ matrix.os }} ${{ matrix.arch }} with Go ${{ matrix.go-version }}
+    strategy:
+      matrix:
+        os: [darwin, linux]
+        arch: [amd64, arm64]
+        go-version:
+        - stable
+        include:
+        - os: linux
+          platform: ubuntu-latest
+        - os: darwin
+          platform: macos-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        ref: ${{ inputs.sha }}
+
+    - uses: actions/setup-go@v6
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - run: make test
+
+    - uses: dorny/test-reporter@v3
+      if: success() || failure()
+      with:
+        name: Go Test Results
+        path: .test/reports/**-test.xml
+        reporter: java-junit
+        fail-on-error: "true"
+  
+    - uses: actions/upload-artifact@v7
+      if: success() || failure()
+      with:
+        name: Test Reports ${{ matrix.os }} ${{ matrix.arch }} Go ${{ matrix.go-version }}
+        path: .test/reports/**

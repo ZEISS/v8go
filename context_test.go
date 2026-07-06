@@ -9,12 +9,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	v8 "github.com/zeiss/v8go"
 )
 
 func TestContextExec(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -41,8 +39,6 @@ func TestContextExec(t *testing.T) {
 }
 
 func TestJSExceptions(t *testing.T) {
-	t.Parallel()
-
 	tests := [...]struct {
 		name   string
 		source string
@@ -72,8 +68,6 @@ func TestJSExceptions(t *testing.T) {
 }
 
 func TestContextRegistry(t *testing.T) {
-	t.Parallel()
-
 	ctx := v8.NewContext()
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -97,8 +91,6 @@ func TestContextRegistry(t *testing.T) {
 }
 
 func TestMemoryLeak(t *testing.T) {
-	t.Parallel()
-
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 
@@ -116,8 +108,6 @@ func TestMemoryLeak(t *testing.T) {
 
 // https://github.com/rogchap/v8go/issues/186
 func TestRegistryFromJSON(t *testing.T) {
-	t.Parallel()
-
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 
@@ -159,25 +149,10 @@ func BenchmarkContext(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		ctx := v8.NewContext(iso)
 		ctx.RunScript(script, "main.js")
-		str, err := json.Marshal(makeObject())
-		require.NoError(b, err)
+		str, _ := json.Marshal(makeObject())
 		cmd := fmt.Sprintf("process(%s)", str)
 		ctx.RunScript(cmd, "cmd.js")
 		ctx.Close()
-	}
-}
-
-func BenchmarkContextExample(b *testing.B) {
-	b.ReportAllocs()
-	iso := v8.NewIsolate()
-	defer iso.Dispose()
-	for n := 0; n < b.N; n++ {
-		ctx := v8.NewContext()
-		defer ctx.Isolate().Dispose()
-		defer ctx.Close()
-		ctx.RunScript("const add = (a, b) => a + b", "math.js")
-		ctx.RunScript("const result = add(3, 4)", "main.js")
-		_, _ = ctx.RunScript("result", "value.js")
 	}
 }
 

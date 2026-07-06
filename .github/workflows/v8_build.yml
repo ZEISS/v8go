@@ -1,0 +1,194 @@
+name: V8 Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      sha:
+        description: "The commit to check out at. Defaults to the parent workflow's github.sha."
+        required: false
+        type: string
+      v8_hash:
+        description: The V8 commit hash to build at. Defaults to the previously built version.
+        required: false
+        type: string
+    outputs:
+      committed:
+        description: Whether built files were comitted.
+        value: ${{ jobs.syncsubdeps.outputs.committed }}
+      sha:
+        description: The resulting SHA commitish.
+        value: ${{ jobs.syncsubdeps.outputs.sha }}
+
+jobs:
+  build_common:
+    name: Build Architecture Independent Files
+    runs-on: ubuntu-latest
+    outputs:
+      v8_hash: ${{ steps.update_v8.outputs.v8_hash }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        submodules: true
+        fetch-depth: 1
+        ref: ${{ inputs.sha }}
+
+    - id: update_v8
+      name: Update to latest V8
+      run: |
+        latest_v8_hash="${{ inputs.v8_hash }}"
+        latest_v8_hash="${latest_v8_hash:-$(<deps/v8_hash)}"
+        cd deps/v8
+        git fetch --depth=1 origin "$latest_v8_hash"
+        git checkout "$latest_v8_hash"
+
+        echo "v8_hash=$latest_v8_hash" >>"$GITHUB_OUTPUT"
+
+    - name: Apply Patches
+      run: |
+        if [ -d patches ]; then
+          for f in patches/*.patch; do
+            echo "Apply $f"
+            patch -p1 -i "$f"
+          done
+        fi
+
+    - name: Create include files
+      run: cd deps && ./build_common.py
+
+    - name: Upload include/ Artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        # The name matches the directory under deps/.
+        name: include
+        if-no-files-found: error
+        path: deps/include/
+        retention-days: 2
+
+  build:
+    name: Build V8 for ${{ matrix.os }} ${{ matrix.arch }}
+    needs: build_common
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [darwin, linux]
+        arch: [amd64, arm64]
+        include:
+        - os: linux
+          platform: ubuntu-22.04
+        - os: darwin
+          platform: macos-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install g++-aarch64-linux-gnu
+      if: matrix.os == 'linux' && matrix.arch == 'arm64'
+      run: sudo apt update && sudo apt install g++-aarch64-linux-gnu -y
+
+    - name: Install setuptools
+      if: matrix.platform == 'macos-latest'
+      run: python3 -m pip install --upgrade setuptools
+      env:
+        # https://stackoverflow.com/a/76469774
+        PIP_BREAK_SYSTEM_PACKAGES: '1'
+
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        submodules: true
+        fetch-depth: 1
+        ref: ${{ inputs.sha }}
+    
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: libv8:ccache:${{ matrix.os }}:${{ matrix.arch }}:${{ hashFiles('deps/v8_hash') }}:${{ runner.os }}
+
+    - name: Update to latest V8
+      run: |
+        latest_v8_hash="${{ needs.build_common.outputs.v8_hash }}"
+        cd deps/v8
+        git fetch --depth=1 origin "$latest_v8_hash"
+        git checkout "$latest_v8_hash"
+
+    - name: Apply Patches
+      run: |
+        if [ -d patches ]; then
+          for f in patches/*.patch; do
+            echo "Apply $f"
+            patch -p1 -i "$f"
+          done
+        fi
+
+    - name: Update depot_tools fetch config
+      run: cd deps/depot_tools && git config --unset-all remote.origin.fetch; git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+
+    - name: Build V8 (${{ matrix.os }})
+      run: cd deps && ./build.py --ccache --arch ${{ matrix.arch }} --os ${{ matrix.os }}
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        # The name matches the directory under deps/.
+        name: ${{ matrix.os }}_${{ matrix.arch }}
+        if-no-files-found: error
+        path: |
+          deps/${{ matrix.os }}_${{ matrix.arch }}/
+          !deps/${{ matrix.os }}_${{ matrix.arch }}/vendor.go
+        retention-days: 2
+
+  commit:
+    name: Commit Built Artifacts
+    needs: [build, build_common]
+    runs-on: ubuntu-latest
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
+      sha: ${{ steps.create_summary.outputs.sha }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        submodules: true
+        fetch-depth: 1
+        ref: ${{ inputs.sha }}
+
+    - id: update_v8
+      name: Update to latest V8
+      run: |
+        latest_v8_hash="${{ needs.build_common.outputs.v8_hash }}"
+        echo "$latest_v8_hash" >deps/v8_hash
+
+        cd deps/v8
+        git fetch --depth=1 origin "$latest_v8_hash"
+        # --tags is slow, so we do it separately for debugability.
+        git fetch --tags origin
+        # V8 also adds a <version>-pgo tag we don't care about.
+        latest_v8_version="$(git tag --points-at "$latest_v8_hash" | grep -v -- '-pgo' | head -n1)"
+        git checkout "${latest_v8_version:-$latest_v8_hash}"
+        echo "latest_v8_version=${latest_v8_version:-$latest_v8_hash}" >>"$GITHUB_OUTPUT"
+
+    - name: Remove old static libraries
+      run: "find deps -maxdepth 2 -type f -name libmanifest | xargs -rn1 dirname | xargs -r rm -fr"
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v8
+      with:
+        path: deps
+
+    - name: Update LDFLAGS in cgo.go
+      run: ./deps/update_cgo.py
+
+    - id: pr_metadata
+      run: |
+        echo ::set-output name=pr_branch::"v8_$(cat deps/v8_hash)_upgrade"
+        echo ::set-output name=pr_commit_message::"Upgrade V8 binaries for $(cat deps/v8_hash) version"
+        echo ::set-output name=pr_body::"Auto-generated pull request to upgrade V8 binary for $(cat deps/v8_hash) version"
+
+    - name: Create PR
+      uses: peter-evans/create-pull-request@v8
+      with:
+        commit-message: ${{steps.pr_metadata.outputs.pr_commit_message}}
+        branch: ${{steps.pr_metadata.outputs.pr_branch}}
+        delete-branch: true
+        title: ${{steps.pr_metadata.outputs.pr_commit_message}}
+        body: ${{steps.pr_metadata.outputs.pr_body}}

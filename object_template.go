@@ -5,12 +5,13 @@
 package v8go
 
 // #include <stdlib.h>
-// #include "v8go.h"
+// #include "object_template.h"
 import "C"
 
 import (
 	"errors"
 	"runtime"
+	"unsafe"
 )
 
 // PropertyAttribute are the attribute flags for a property on an Object.
@@ -67,6 +68,35 @@ func (o *ObjectTemplate) SetInternalFieldCount(fieldCount uint32) {
 	C.ObjectTemplateSetInternalFieldCount(o.ptr, C.int(fieldCount))
 }
 
+// SetAccessorProperty creates a named accessor property, i.e., a property that
+// is implemented as a function call. Arguments get and set represents the
+// getter and setter, and can both be nil.
+//
+// Note: The [ReadOnly] should not be used with a readonly property. If set is
+// nil, the property will be readonly, and passing [None] is a sensible default.
+//
+// This corresponds to ObjectTemplate::SetAccessorProperty in the C++ API.
+func (o *ObjectTemplate) SetAccessorProperty(
+	key string,
+	get *FunctionTemplate,
+	set *FunctionTemplate,
+	attributes PropertyAttribute,
+) {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+	var (
+		getter C.TemplatePtr
+		setter C.TemplatePtr
+	)
+	if get != nil {
+		getter = get.ptr
+	}
+	if set != nil {
+		setter = set.ptr
+	}
+	C.ObjectTemplateSetAccessorProperty(o.ptr, ckey, getter, setter, C.int(attributes))
+}
+
 // InternalFieldCount returns the number of internal fields that instances of this
 // template will have.
 func (o *ObjectTemplate) InternalFieldCount() uint32 {
@@ -75,4 +105,28 @@ func (o *ObjectTemplate) InternalFieldCount() uint32 {
 
 func (o *ObjectTemplate) apply(opts *contextOptions) {
 	opts.gTmpl = o
+}
+
+// MarkAsUndetectable marks object instances of the template as undetectable. Undetectable
+// objects behave like undefined, but you can access properties defined on undetectable
+// objects.
+//
+// Note: Undetectable objects MUST have a CallAsFunctionHandler, see
+// [ObjectTemplate.SetCallAsFunctionHandler].
+func (o *ObjectTemplate) MarkAsUndetectable() {
+	C.ObjectTemplateMarkAsUndetectable(o.ptr)
+}
+
+// SetCallAsFunctionHandler sets the callback to be used when calling instances created
+// from this template. If no callback is set, instances behave like normal JavaScript
+// objects that cannot be called as a function.
+func (o *ObjectTemplate) SetCallAsFunctionHandler(callback FunctionCallbackWithError) {
+	if callback == nil {
+		panic("nil callback argument not supported")
+	}
+	cbref := o.iso.registerCallback(callback)
+	C.ObjectTemplateSetCallAsFunctionHandler(
+		o.ptr,
+		C.int(cbref),
+	)
 }

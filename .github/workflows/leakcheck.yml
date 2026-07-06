@@ -6,18 +6,34 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      sha:
+        description: "The commit to check out at. Defaults to the parent workflow's github.sha."
+        required: false
+        type: string
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v7
-    - uses: actions/setup-go@v6
-    - name: Go Test
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        ref: ${{ inputs.sha }}
+
+    - name: Install Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: ./go.mod
+
+    - name: Build Test
       env:
         CC: clang
         CXX: clang++
       run: |
         go test -c --tags leakcheck
-        ./v8go.test
+
+    - name: Run Test
+      run: ./v8go.test

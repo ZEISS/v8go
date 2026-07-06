@@ -11,8 +11,6 @@ import (
 )
 
 func TestCPUProfiler_Dispose(t *testing.T) {
-	t.Parallel()
-
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 	cpuProfiler := v8.NewCPUProfiler(iso)
@@ -45,8 +43,6 @@ func TestCPUProfiler_Dispose(t *testing.T) {
 }
 
 func TestCPUProfiler(t *testing.T) {
-	t.Parallel()
-
 	ctx := v8.NewContext(nil)
 	iso := ctx.Isolate()
 	defer iso.Dispose()

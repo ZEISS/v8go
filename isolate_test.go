@@ -9,16 +9,14 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	v8 "github.com/zeiss/v8go"
 )
 
-const testStr = "bar"
-
 func TestIsolateTerminateExecution(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 
@@ -73,7 +71,7 @@ func TestIsolateCompileUnboundScript(t *testing.T) {
 
 	val, err := us.Run(c1)
 	fatalIf(t, err)
-	if val.String() != testStr {
+	if val.String() != "bar" {
 		t.Fatalf("invalid value returned, expected bar got %v", val)
 	}
 
@@ -96,7 +94,7 @@ func TestIsolateCompileUnboundScript(t *testing.T) {
 
 	val, err = usWithCachedData.Run(c2)
 	fatalIf(t, err)
-	if val.String() != testStr {
+	if val.String() != "bar" {
 		t.Fatalf("invalid value returned, expected bar got %v", val)
 	}
 }
@@ -120,7 +118,7 @@ func TestIsolateCompileUnboundScript_CachedDataRejected(t *testing.T) {
 	// Verify that unbound script is still compiled and able to be used
 	val, err := us.Run(ctx)
 	fatalIf(t, err)
-	if val.String() != testStr {
+	if val.String() != "bar" {
 		t.Errorf("invalid value returned, expected bar got %v", val)
 	}
 }
@@ -143,7 +141,6 @@ func TestIsolateCompileUnboundScript_InvalidOptions(t *testing.T) {
 }
 
 func TestIsolateGetHeapStatistics(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 	ctx1 := v8.NewContext(iso)
@@ -163,11 +160,9 @@ func TestIsolateGetHeapStatistics(t *testing.T) {
 }
 
 func TestCallbackRegistry(t *testing.T) {
-	t.Parallel()
-
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
-	cb := func(*v8.FunctionCallbackInfo) *v8.Value { return nil }
+	cb := func(*v8.FunctionCallbackInfo) (*v8.Value, error) { return nil, nil }
 
 	cb0 := iso.GetCallback(0)
 	if cb0 != nil {
@@ -184,8 +179,6 @@ func TestCallbackRegistry(t *testing.T) {
 }
 
 func TestIsolateDispose(t *testing.T) {
-	t.Parallel()
-
 	iso := v8.NewIsolate()
 	if iso.GetHeapStatistics().TotalHeapSize == 0 {
 		t.Error("Isolate incorrectly allocated")
@@ -203,7 +196,6 @@ func TestIsolateDispose(t *testing.T) {
 }
 
 func TestIsolateThrowException(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 
 	strErr, _ := v8.NewValue(iso, "some type error")
@@ -258,25 +250,45 @@ func TestIsolateThrowException(t *testing.T) {
 	}
 }
 
-func BenchmarkIsolateInitialization(b *testing.B) {
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		vm := v8.NewIsolate()
-		vm.Close() // force disposal of the VM
+func TestNewIsolateWithConstraints(t *testing.T) {
+	iso := v8.NewIsolate(v8.WithResourceConstraints(
+		8*1024*1024,
+		16*1024*1024,
+	))
+	defer iso.Dispose()
+
+	ctx := v8.NewContext(iso)
+	defer ctx.Close()
+
+	// First test - should work fine
+	val, err := ctx.RunScript("1 + 2", "test.js")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !val.IsNumber() || val.Number() != 3 {
+		t.Errorf("expected 3, got %v", val)
+	}
+
+	// Second test - should run out of memory without crashing the process
+	val, err = ctx.RunScript(`
+			const data = [];
+			for (let i = 0; i < 1000 * 1000; i++) {
+					data.push("large data chunk ".repeat(1000));
+			}
+			data.length;
+		`, "memory-test.js")
+	if err != nil {
+		t.Logf("Memory test correctly returned error: %v", err)
+	} else {
+		t.Fatalf("Memory test completed unexpectedly: %v", val)
 	}
 }
 
-func BenchmarkIsolateInitAndRun(b *testing.B) {
+func BenchmarkIsolateInitialization(b *testing.B) {
 	b.ReportAllocs()
+
 	for n := 0; n < b.N; n++ {
 		vm := v8.NewIsolate()
-		ctx := v8.NewContext(vm)
-		ctx.RunScript(script, "main.js")
-		str, err := json.Marshal(makeObject())
-		require.NoError(b, err)
-		cmd := fmt.Sprintf("process(%s)", str)
-		ctx.RunScript(cmd, "cmd.js")
-		ctx.Close()
 		vm.Close() // force disposal of the VM
 	}
 }
@@ -294,9 +306,99 @@ const script = `
 	};
 `
 
+func BenchmarkIsolateInitAndRunConcurrent(b *testing.B) {
+	b.ReportAllocs()
+
+	clients := []int{1000, 5000, 10000, 50000, 100000}
+	for _, c := range clients {
+		b.Run(fmt.Sprintf("process(%d)", c), func(b *testing.B) {
+			sem := make(chan struct{}, c)
+			wg := sync.WaitGroup{}
+			for n := 0; n < b.N; n++ {
+				wg.Add(1)
+
+				go func() {
+					defer wg.Done()
+					sem <- struct{}{}        // acquire semaphore
+					defer func() { <-sem }() // release semaphore
+
+					iso := v8.NewIsolate()
+					ctx := v8.NewContext(iso)
+					defer iso.Dispose()
+					defer ctx.Close()
+
+					_, err := ctx.RunScript(script, "script.js")
+					require.NoError(b, err)
+
+					obj := makeObject()
+					jsonStr, err := json.Marshal(obj)
+					require.NoError(b, err)
+
+					val, err := ctx.RunScript(fmt.Sprintf("process(%s)", jsonStr), "process.js")
+					require.NoError(b, err)
+
+					var res []map[string]interface{}
+					err = json.Unmarshal([]byte(val.String()), &res)
+					require.NoError(b, err)
+				}()
+			}
+
+			wg.Wait()
+		})
+	}
+}
+
+func BenchmarkIsolateInitRun(b *testing.B) {
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		iso := v8.NewIsolate()
+		ctx := v8.NewContext(iso)
+		_, err := ctx.RunScript(script, "script.js")
+		require.NoError(b, err)
+
+		obj := makeObject()
+		jsonStr, err := json.Marshal(obj)
+		require.NoError(b, err)
+
+		val, err := ctx.RunScript(fmt.Sprintf("process(%s)", jsonStr), "process.js")
+		require.NoError(b, err)
+
+		var res []map[string]interface{}
+		err = json.Unmarshal([]byte(val.String()), &res)
+		require.NoError(b, err)
+
+		ctx.Close()
+		iso.Dispose()
+	}
+}
+
+func BenchmarkIsolateCodeCache(b *testing.B) {
+	b.ReportAllocs()
+
+	iso := v8.NewIsolate()
+	defer iso.Dispose()
+
+	scrpt, err := iso.CompileUnboundScript(string(script), "main.js", v8.CompileOptions{})
+	cache := scrpt.CreateCodeCache()
+	opts := v8.CompileOptions{CachedData: cache}
+	require.NoError(b, err)
+
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		iso := v8.NewIsolate()
+		ctx := v8.NewContext(iso)
+		script, _ := iso.CompileUnboundScript(string(script), "main.js", opts)
+		script.Run(ctx)
+		ctx.Close()
+		iso.Dispose()
+	}
+}
+
 func makeObject() interface{} {
 	return map[string]interface{}{
-		"a": rand.Intn(1000000),
+		"a": rand.Intn(1000000), //nolint:gosec
 		"b": "AAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBB",
 	}
 }

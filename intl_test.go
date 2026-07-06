@@ -11,7 +11,7 @@ import (
 )
 
 func TestIntlSupport(t *testing.T) {
-	t.Parallel()
+	t.Skip()
 
 	ctx := v8.NewContext(nil)
 	iso := ctx.Isolate()

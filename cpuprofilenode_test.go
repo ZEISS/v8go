@@ -11,8 +11,6 @@ import (
 )
 
 func TestCPUProfileNode(t *testing.T) {
-	t.Parallel()
-
 	ctx := v8.NewContext(nil)
 	iso := ctx.Isolate()
 	defer iso.Dispose()
@@ -68,6 +66,7 @@ func TestCPUProfileNode(t *testing.T) {
 	delayNode := findChild(t, fooNode, "delay")
 	checkNode(t, delayNode, "script.js", "delay", 12, 15)
 
+	// TODO: this is flaky? https://github.com/zeiss/v8go/actions/runs/7363603520/job/20043211523
 	barNode := findChild(t, fooNode, "bar")
 	checkNode(t, barNode, "script.js", "bar", 13, 13)
 
@@ -94,7 +93,8 @@ func findChild(t *testing.T, node *v8.CPUProfileNode, functionName string) *v8.C
 	return child
 }
 
-func checkNode(t *testing.T, node *v8.CPUProfileNode, scriptResourceName string, functionName string, line, column int) {
+//nolint:unparam
+func checkNode(t *testing.T, node *v8.CPUProfileNode, scriptResourceName, functionName string, line, column int) {
 	t.Helper()
 
 	if node.GetFunctionName() != functionName {

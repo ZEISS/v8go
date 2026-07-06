@@ -5,7 +5,7 @@
 package v8go
 
 // #include <stdlib.h>
-// #include "v8go.h"
+// #include "value.h"
 import "C"
 
 import (
@@ -16,14 +16,14 @@ import (
 	"unsafe"
 )
 
-// Value represents all Javascript values and objects
+// Value represents all Javascript values and objects.
 type Value struct {
 	ptr C.ValuePtr
 	ctx *Context
 }
 
 // Valuer is an interface that reperesents anything that extends from a Value
-// eg. Object, Array, Date etc
+// eg. Object, Array, Date etc.
 type Valuer interface {
 	value() *Value
 }
@@ -44,12 +44,12 @@ func newValueUndefined(iso *Isolate) *Value {
 	}
 }
 
-// Undefined returns the `undefined` JS value
+// Undefined returns the `undefined` JS value.
 func Undefined(iso *Isolate) *Value {
 	return iso.undefined
 }
 
-// Null returns the `null` JS value
+// Null returns the `null` JS value.
 func Null(iso *Isolate) *Value {
 	return iso.null
 }
@@ -63,8 +63,6 @@ func Null(iso *Isolate) *Value {
 //	uint64 -> V8::BigInt
 //	bool -> V8::Boolean
 //	*big.Int -> V8::BigInt
-//
-// nolint: gocyclo
 func NewValue(iso *Isolate, val interface{}) (*Value, error) {
 	if iso == nil {
 		return nil, errors.New("v8go: failed to create new Value: Isolate cannot be <nil>")
@@ -148,12 +146,12 @@ func (v *Value) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			io.WriteString(s, v.DetailString()) // nolint:errcheck
+			io.WriteString(s, v.DetailString())
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, v.String()) // nolint:errcheck
+		io.WriteString(s, v.String())
 	case 'q':
 		fmt.Fprintf(s, "%q", v.String())
 	}
@@ -244,7 +242,7 @@ func (v *Value) Object() *Object {
 // print their definition.
 func (v *Value) String() string {
 	s := C.ValueToString(v.ptr)
-	defer C.free(unsafe.Pointer(s.data))
+	defer C.RtnStringRelease(s)
 	return C.GoStringN(s.data, s.length)
 }
 
@@ -562,11 +560,27 @@ func (v *Value) AsObject() (*Object, error) {
 	return &Object{v}, nil
 }
 
+// AsSymbol will cast the value to the Symbol type. If the value is not a Symbol
+// then an error is returned.
+func (v *Value) AsSymbol() (*Symbol, error) {
+	if !v.IsSymbol() {
+		return nil, errors.New("v8go: value is not a Symbol")
+	}
+	return &Symbol{v}, nil
+}
+
 func (v *Value) AsPromise() (*Promise, error) {
 	if !v.IsPromise() {
 		return nil, errors.New("v8go: value is not a Promise")
 	}
 	return &Promise{&Object{v}}, nil
+}
+
+func (v *Value) AsException() (*Exception, error) {
+	if !v.IsNativeError() {
+		return nil, errors.New("v8go: value is not an Error")
+	}
+	return &Exception{v}, nil
 }
 
 func (v *Value) AsFunction() (*Function, error) {
@@ -583,4 +597,31 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return []byte(jsonStr), nil
+}
+
+func (v *Value) SharedArrayBufferGetContents() ([]byte, func(), error) {
+	if !v.IsSharedArrayBuffer() {
+		return nil, nil, errors.New("v8go: value is not a SharedArrayBuffer")
+	}
+
+	backingStore := C.SharedArrayBufferGetBackingStore(v.ptr)
+	release := func() {
+		C.BackingStoreRelease(backingStore)
+	}
+
+	byte_ptr := (*byte)(C.BackingStoreData(backingStore))
+	byte_size := C.BackingStoreByteLength(backingStore)
+	byte_slice := unsafe.Slice(byte_ptr, byte_size)
+
+	return byte_slice, release, nil
+}
+
+func (v *Value) StrictEquals(other *Value) bool {
+	return C.ValueStrictEquals(v.ptr, other.ptr) != 0
+}
+
+func (v *Value) TypeOf() string {
+	s := C.ValueTypeOf(v.ptr)
+	defer C.RtnStringRelease(s)
+	return C.GoStringN(s.data, s.length)
 }

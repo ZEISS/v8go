@@ -5,7 +5,7 @@
 package v8go
 
 // #include <stdlib.h>
-// #include "v8go.h"
+// #include "json.h"
 import "C"
 
 import (
@@ -22,7 +22,7 @@ func JSONParse(ctx *Context, str string) (*Value, error) {
 	cstr := C.CString(str)
 	defer C.free(unsafe.Pointer(cstr))
 
-	rtn := C.JSONParse(ctx.ptr, cstr)
+	rtn := C.JSONParse(ctx.ptr, cstr, nil)
 	return valueResult(ctx, rtn)
 }
 

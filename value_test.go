@@ -32,7 +32,6 @@ func TestValueNewBaseCases(t *testing.T) {
 }
 
 func TestValueFormatting(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -67,7 +66,6 @@ func TestValueFormatting(t *testing.T) {
 }
 
 func TestValueString(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -96,7 +94,6 @@ func TestValueString(t *testing.T) {
 }
 
 func TestNewValue(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	iso := ctx.Isolate()
 	defer iso.Dispose()
@@ -140,7 +137,6 @@ func TestNewValue(t *testing.T) {
 }
 
 func TestValueDetailString(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -168,7 +164,6 @@ func TestValueDetailString(t *testing.T) {
 }
 
 func TestValueBoolean(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -218,7 +213,6 @@ func TestValueConstants(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		val, err := ctx.RunScript(tt.source, "test.js")
 		fatalIf(t, err)
 
@@ -230,7 +224,6 @@ func TestValueConstants(t *testing.T) {
 }
 
 func TestValueArrayIndex(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -267,7 +260,6 @@ func TestValueArrayIndex(t *testing.T) {
 }
 
 func TestValueInt32(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -305,7 +297,6 @@ func TestValueInt32(t *testing.T) {
 }
 
 func TestValueInteger(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -343,7 +334,6 @@ func TestValueInteger(t *testing.T) {
 }
 
 func TestValueNumber(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -386,7 +376,6 @@ func TestValueNumber(t *testing.T) {
 }
 
 func TestValueUint32(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -411,11 +400,13 @@ func TestValueUint32(t *testing.T) {
 }
 
 func TestValueBigInt(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 
-	x, _ := new(big.Int).SetString("36893488147419099136", 10) // larger than a single word size (64bit)
+	x, _ := new(
+		big.Int,
+	).SetString("36893488147419099136", 10)
+	// larger than a single word size (64bit)
 
 	tests := [...]struct {
 		source   string
@@ -468,9 +459,31 @@ func TestValueObject(t *testing.T) {
 	}
 }
 
-func TestValuePromise(t *testing.T) {
-	t.Parallel()
+func TestValueAsSymbol(t *testing.T) {
+	ctx := v8.NewContext()
+	defer ctx.Isolate().Dispose()
+	defer ctx.Close()
 
+	t.Run("valid", func(t *testing.T) {
+		val, _ := ctx.RunScript("Symbol.iterator", "")
+		got, err := val.AsSymbol()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if want := "Symbol.iterator"; got.Description() != want {
+			t.Errorf("Description: expected %q, but got %q", want, got.Description())
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		val, _ := ctx.RunScript("1", "")
+		if _, err := val.AsSymbol(); err == nil {
+			t.Error("Expected error but got <nil>")
+		}
+	})
+}
+
+func TestValuePromise(t *testing.T) {
 	ctx := v8.NewContext()
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -481,6 +494,26 @@ func TestValuePromise(t *testing.T) {
 	}
 	if _, err := ctx.RunScript("new Promise(()=>{})", ""); err != nil {
 		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestValueAsException(t *testing.T) {
+	t.Parallel()
+
+	ctx := v8.NewContext()
+	defer ctx.Isolate().Dispose()
+	defer ctx.Close()
+
+	val, _ := ctx.RunScript("1", "")
+	if _, err := val.AsException(); err == nil {
+		t.Error("Expected error but got <nil>")
+	}
+	val, err := ctx.RunScript("new Error('foo')", "")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if _, err := val.AsException(); err != nil {
+		t.Errorf("Expected success but got: %v", err)
 	}
 }
 
@@ -517,16 +550,15 @@ func TestValueSameValue(t *testing.T) {
 	obj2, err := objTempl.NewInstance(ctx)
 	fatalIf(t, err)
 
-	if obj1.Value.SameValue(obj2.Value) != false {
+	if obj1.SameValue(obj2.Value) != false {
 		t.Errorf("SameValue on two different values didn't return false")
 	}
-	if obj1.Value.SameValue(obj1.Value) != true {
+	if obj1.SameValue(obj1.Value) != true {
 		t.Errorf("SameValue on two of the same value didn't return true")
 	}
 }
 
 func TestValueIsXXX(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 	tests := [...]struct {
@@ -634,14 +666,16 @@ func TestValueIsXXX(t *testing.T) {
 				t.Fatalf("failed to run script: %v", err)
 			}
 			if !tt.assert(val) {
-				t.Errorf("value is false for %s", runtime.FuncForPC(reflect.ValueOf(tt.assert).Pointer()).Name())
+				t.Errorf(
+					"value is false for %s",
+					runtime.FuncForPC(reflect.ValueOf(tt.assert).Pointer()).Name(),
+				)
 			}
 		})
 	}
 }
 
 func TestValueMarshalJSON(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 
@@ -691,5 +725,129 @@ func TestValueMarshalJSON(t *testing.T) {
 				t.Errorf("unexpected JSON value: %s", string(json))
 			}
 		})
+	}
+}
+
+func TestValueArrayBufferContents(t *testing.T) {
+	t.Parallel()
+	iso := v8.NewIsolate()
+	defer iso.Dispose()
+
+	ctx := v8.NewContext(iso)
+	defer ctx.Close()
+
+	val, err := ctx.RunScript(`
+	  (()=>{
+			let buf = new SharedArrayBuffer(1024);
+			let arr = new Int8Array(buf);
+			arr[0] = 42;
+			arr[1] = 52;
+			return buf;
+		})();
+	`, "test.js")
+	if err != nil {
+		t.Fatalf("failed to run script: %v", err)
+	}
+
+	if !val.IsSharedArrayBuffer() {
+		t.Fatalf("expected SharedArrayBuffer value")
+	}
+
+	buf, cleanup, err := val.SharedArrayBufferGetContents()
+	if err != nil {
+		t.Fatalf("error getting array buffer contents: %#v", err)
+	}
+	defer cleanup()
+
+	if len(buf) != 1024 {
+		t.Fatalf("expected len(buf) to be 1024")
+	}
+
+	if buf[0] != 42 {
+		t.Fatalf("expected buf[0] to be 42")
+	}
+
+	if buf[1] != 52 {
+		t.Fatalf("expected buf[1] to be 52")
+	}
+
+	if buf[3] != 0 {
+		t.Fatalf("expected buf[1] to be 0")
+	}
+
+	// ensure there's an error if we call the method on something that isn't a SharedArrayBuffer
+	val, err = ctx.RunScript("7", "test2.js")
+	if err != nil {
+		t.Fatalf("error running trivial script")
+	}
+	_, _, err = val.SharedArrayBufferGetContents()
+	if err == nil {
+		t.Fatalf(
+			"Expected an error trying call SharedArrayBufferGetContents on value of incorrect type",
+		)
+	}
+}
+
+func TestValueStrictEquals(t *testing.T) {
+	ctx := v8.NewContext()
+	defer ctx.Close()
+
+	numberOne, err1 := ctx.RunScript("1", "")
+	numberOneB, err2 := ctx.RunScript("1", "")
+	numberTwo, err3 := ctx.RunScript("2", "")
+	stringOne, err4 := ctx.RunScript("'1'", "")
+	function, err5 := ctx.RunScript("const fn = () => {}; fn", "")
+	sameFunction, err6 := ctx.RunScript("fn", "")
+	anotherFunction, err7 := ctx.RunScript("const fn2 = () => {}; fn2", "")
+
+	if err := errorsJoin(err1, err2, err3, err4, err5, err6, err7); err != nil {
+		t.Fatal("Error getting test values", err)
+	}
+
+	if !numberOne.StrictEquals(numberOneB) {
+		t.Errorf("Number 1 and Number 1 should be strict equal")
+	}
+	if numberOne.StrictEquals(stringOne) {
+		t.Errorf("Number 1 and string '1' should not be strict equal")
+	}
+
+	if numberOne.StrictEquals(numberTwo) {
+		t.Errorf("Number 1 and number 2 should not be strict equal")
+	}
+
+	if !function.StrictEquals(sameFunction) {
+		t.Errorf("Getting the same function variable twice should be strict equal")
+	}
+
+	if function.StrictEquals(anotherFunction) {
+		t.Errorf("Comparing two different functions should not be strict equal")
+	}
+}
+
+func TestValueTypeOf(t *testing.T) {
+	t.Parallel()
+	iso := v8.NewIsolate()
+	defer iso.Dispose()
+	ctx := v8.NewContext(iso)
+	defer ctx.Close()
+
+	str1, _ := v8.NewValue(iso, "String")
+	if got := str1.TypeOf(); got != "string" {
+		t.Errorf(`NewValue("String"): expected string, got %s`, got)
+	}
+
+	str2, _ := ctx.RunScript("'string'", "")
+	if got := str2.TypeOf(); got != "string" {
+		t.Errorf("TypeOf('string'): expected string, got %s", got)
+	}
+
+	num1, _ := v8.NewValue(iso, 0.01)
+	if got := num1.TypeOf(); got != "number" {
+		t.Errorf(`NewValue(0.01): expected number, got %s`, got)
+	}
+
+	num2, _ := ctx.RunScript("0.01", "")
+	if got := num2.TypeOf(); got != "number" {
+		t.Errorf("TypeOf(0.01): expected number, got %s", got)
 	}
 }

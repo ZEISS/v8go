@@ -5,15 +5,13 @@
 package v8go
 
 // #include <stdlib.h>
-// #include "v8go.h"
+// #include "isolate.h"
 import "C"
 
 import (
 	"sync"
 	"unsafe"
 )
-
-var v8once sync.Once
 
 // Isolate is a JavaScript VM instance with its own heap and
 // garbage collector. Most applications will create one isolate
@@ -23,13 +21,13 @@ type Isolate struct {
 
 	cbMutex sync.RWMutex
 	cbSeq   int
-	cbs     map[int]FunctionCallback
+	cbs     map[int]FunctionCallbackWithError
 
 	null      *Value
 	undefined *Value
 }
 
-// HeapStatistics represents V8 isolate heap statistics
+// HeapStatistics represents V8 isolate heap statistics.
 type HeapStatistics struct {
 	TotalHeapSize            uint64
 	TotalHeapSizeExecutable  uint64
@@ -44,18 +42,56 @@ type HeapStatistics struct {
 	NumberOfDetachedContexts uint64
 }
 
-// NewIsolate creates a new V8 isolate. Only one thread may access
-// a given isolate at a time, but different threads may access
-// different isolates simultaneously.
+type resourceConstraints struct {
+	InitialHeapSizeInBytes uint64
+	MaxHeapSizeInBytes     uint64
+}
+
+// IsolateOption configures an Isolate on creation.
+type IsolateOption func(*isolateConfig)
+
+// isolateConfig holds the configuration for creating an isolate.
+type isolateConfig struct {
+	resourceConstraints *resourceConstraints
+}
+
+// WithResourceConstraints sets memory constraints for the isolate.
+// If constraints are set, v8go will try to call `TerminateExecution` when the hard limit is hit.
+func WithResourceConstraints(initialHeapSizeInBytes, maxHeapSizeInBytes uint64) IsolateOption {
+	return func(config *isolateConfig) {
+		config.resourceConstraints = &resourceConstraints{
+			InitialHeapSizeInBytes: initialHeapSizeInBytes,
+			MaxHeapSizeInBytes:     maxHeapSizeInBytes,
+		}
+	}
+}
+
+// NewIsolate creates a new V8 isolate with the provided options.
+// Only one thread may access a given isolate at a time, but different
+// threads may access different isolates simultaneously.
 // When an isolate is no longer used its resources should be freed
 // by calling iso.Dispose().
 // An *Isolate can be used as a v8go.ContextOption to create a new
 // Context, rather than creating a new default Isolate.
-func NewIsolate() *Isolate {
+func NewIsolate(opts ...IsolateOption) *Isolate {
 	initializeIfNecessary()
+
+	config := &isolateConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	var cConstraints C.IsolateConstraintsPtr
+	if config.resourceConstraints != nil {
+		cConstraints = &C.IsolateConstraints{
+			initial_heap_size_in_bytes: C.size_t(config.resourceConstraints.InitialHeapSizeInBytes),
+			maximum_heap_size_in_bytes: C.size_t(config.resourceConstraints.MaxHeapSizeInBytes),
+		}
+	}
+
 	iso := &Isolate{
-		ptr: C.NewIsolate(),
-		cbs: make(map[int]FunctionCallback),
+		ptr: C.NewIsolate(cConstraints),
+		cbs: make(map[int]FunctionCallbackWithError),
 	}
 	iso.null = newValueNull(iso)
 	iso.undefined = newValueUndefined(iso)
@@ -86,7 +122,10 @@ type CompileOptions struct {
 // If options contain a non-null CachedData, compilation of the script will use
 // that code cache.
 // error will be of type `JSError` if not nil.
-func (i *Isolate) CompileUnboundScript(source, origin string, opts CompileOptions) (*UnboundScript, error) {
+func (i *Isolate) CompileUnboundScript(
+	source, origin string,
+	opts CompileOptions,
+) (*UnboundScript, error) {
 	cSource := C.CString(source)
 	cOrigin := C.CString(origin)
 	defer C.free(unsafe.Pointer(cSource))
@@ -169,7 +208,7 @@ func (i *Isolate) apply(opts *contextOptions) {
 	opts.iso = i
 }
 
-func (i *Isolate) registerCallback(cb FunctionCallback) int {
+func (i *Isolate) registerCallback(cb FunctionCallbackWithError) int {
 	i.cbMutex.Lock()
 	i.cbSeq++
 	ref := i.cbSeq
@@ -178,7 +217,7 @@ func (i *Isolate) registerCallback(cb FunctionCallback) int {
 	return ref
 }
 
-func (i *Isolate) getCallback(ref int) FunctionCallback {
+func (i *Isolate) getCallback(ref int) FunctionCallbackWithError {
 	i.cbMutex.RLock()
 	defer i.cbMutex.RUnlock()
 	return i.cbs[ref]

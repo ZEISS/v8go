@@ -13,7 +13,6 @@ import (
 )
 
 func TestJSErrorFormat(t *testing.T) {
-	t.Parallel()
 	tests := [...]struct {
 		name            string
 		err             error
@@ -28,7 +27,6 @@ func TestJSErrorFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			if s := fmt.Sprintf("%v", tt.err); s != tt.defaultVerb {
 				t.Errorf("incorrect format for %%v: %s", s)
 			}
@@ -46,7 +44,6 @@ func TestJSErrorFormat(t *testing.T) {
 }
 
 func TestJSErrorOutput(t *testing.T) {
-	t.Parallel()
 	ctx := v8.NewContext(nil)
 	defer ctx.Isolate().Dispose()
 	defer ctx.Close()
@@ -72,29 +69,30 @@ func TestJSErrorOutput(t *testing.T) {
 		t.Error("expected error but got <nil>")
 		return
 	}
-
-	var jsErr *v8.JSError
-	if !errors.As(err, &jsErr) {
-		t.Errorf("expected error to be of type JSError, got: %T", err)
+	var v8Err *v8.JSError
+	ok := errors.As(err, &v8Err) // unwrap any wrapped errors
+	if !ok {
+		t.Errorf("expected error of type JSError, got %T", err)
 	}
-
-	if jsErr.Message != "ReferenceError: c is not defined" {
-		t.Errorf("unexpected error message: %q", jsErr.Message)
+	if !ok {
+		t.Errorf("expected error of type JSError, got %T", err)
 	}
-	if jsErr.Location != "math.js:7:17" {
-		t.Errorf("unexpected error location: %q", jsErr.Location)
+	if v8Err.Message != "ReferenceError: c is not defined" {
+		t.Errorf("unexpected error message: %q", v8Err.Message)
+	}
+	if v8Err.Location != "math.js:7:17" {
+		t.Errorf("unexpected error location: %q", v8Err.Location)
 	}
 	expectedStack := `ReferenceError: c is not defined
     at addMore (math.js:7:17)
     at main.js:3:10`
 
-	if jsErr.StackTrace != expectedStack {
-		t.Errorf("unexpected error stack trace: %q", jsErr.StackTrace)
+	if v8Err.StackTrace != expectedStack {
+		t.Errorf("unexpected error stack trace: %q", v8Err.StackTrace)
 	}
 }
 
 func TestJSErrorFormat_forSyntaxError(t *testing.T) {
-	t.Parallel()
 	iso := v8.NewIsolate()
 	defer iso.Dispose()
 	ctx := v8.NewContext(iso)
@@ -107,14 +105,15 @@ func TestJSErrorFormat_forSyntaxError(t *testing.T) {
 	`
 	_, err := ctx.RunScript(script, "xyz.js")
 
-	var jsErr *v8.JSError
-	if !errors.As(err, &jsErr) {
-		t.Errorf("expected error to be of type JSError, got: %T", err)
+	var v8Err *v8.JSError
+	ok := errors.As(err, &v8Err) // unwrap any wrapped errors
+	if !ok {
+		t.Errorf("expected error of type JSError, got %T", err)
 	}
-	if jsErr.StackTrace != jsErr.Message {
-		t.Errorf("unexpected StackTrace %q not equal to Message %q", jsErr.StackTrace, jsErr.Message)
+	if v8Err.StackTrace != v8Err.Message {
+		t.Errorf("unexpected StackTrace %q not equal to Message %q", v8Err.StackTrace, v8Err.Message)
 	}
-	if jsErr.Location == "" {
+	if v8Err.Location == "" {
 		t.Errorf("missing Location")
 	}
 
